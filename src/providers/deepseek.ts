@@ -14,7 +14,6 @@ export type DeepseekStatus = {
 }
 
 export type DeepseekError = {
-  kind: "not_configured" | "http" | "parse_failed"
   message: string
 }
 
@@ -58,7 +57,7 @@ export async function fetchDeepseekStatus(
   api: TuiPluginApi,
 ): Promise<DeepseekStatus | DeepseekError> {
   const key = await resolveDeepseekKey(api)
-  if (!key) return { kind: "not_configured", message: "missing API key" }
+  if (!key) return { message: "missing API key" }
   let res: Response
   try {
     res = await fetch(DEEPSEEK_API, {
@@ -66,11 +65,11 @@ export async function fetchDeepseekStatus(
       headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
     })
   } catch (err) {
-    return { kind: "http", message: err instanceof Error ? err.message : String(err) }
+    return { message: err instanceof Error ? err.message : String(err) }
   }
-  if (!res.ok) return { kind: "http", message: `HTTP ${res.status}` }
+  if (!res.ok) return { message: `HTTP ${res.status}` }
   const data: unknown = await res.json().catch(() => null)
   const parsed = parseBalance(data)
-  if (!parsed) return { kind: "parse_failed", message: "unexpected balance payload" }
+  if (!parsed) return { message: "unexpected balance payload" }
   return parsed
 }

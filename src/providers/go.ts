@@ -16,7 +16,6 @@ export type GoWindow = {
 export type GoUsage = { source: "api" | "dashboard"; windows: GoWindow[] }
 
 export type GoError = {
-  kind: "not_configured" | "http" | "parse_failed" | "login_required"
   message: string
 }
 
@@ -119,7 +118,7 @@ export function isLoginPage(html: string): boolean {
 
 async function fetchDashboard(creds: GoCredentials): Promise<GoUsage | GoError> {
   if (!creds.workspaceId || !creds.authCookie) {
-    return { kind: "not_configured", message: "dashboard not configured: set workspaceId and authCookie" }
+    return { message: "dashboard not configured: set workspaceId and authCookie" }
   }
   const res = await fetch(
     `${DASHBOARD_PREFIX}${encodeURIComponent(creds.workspaceId)}/go`,
@@ -132,9 +131,9 @@ async function fetchDashboard(creds: GoCredentials): Promise<GoUsage | GoError> 
       },
     },
   )
-  if (!res.ok) return { kind: "http", message: `dashboard request failed (HTTP ${res.status})` }
+  if (!res.ok) return { message: `dashboard request failed (HTTP ${res.status})` }
   const html = await res.text()
-  if (isLoginPage(html)) return { kind: "login_required", message: "dashboard session expired: update authCookie" }
+  if (isLoginPage(html)) return { message: "dashboard session expired: update authCookie" }
   const windows: GoWindow[] = []
   for (const { field, id } of WINDOW_FIELDS) {
     const p = parseWindowFromHtml(html, field)
@@ -143,7 +142,7 @@ async function fetchDashboard(creds: GoCredentials): Promise<GoUsage | GoError> 
     }
   }
   if (windows.length === 0) {
-    return { kind: "parse_failed", message: "dashboard parse failed: page structure may have changed" }
+    return { message: "dashboard parse failed: page structure may have changed" }
   }
   return { source: "dashboard", windows }
 }
@@ -174,6 +173,6 @@ export async function fetchGoUsage(
   try {
     return await fetchDashboard(creds)
   } catch (err) {
-    return { kind: "http", message: err instanceof Error ? err.message : String(err) }
+    return { message: err instanceof Error ? err.message : String(err) }
   }
 }
