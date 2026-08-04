@@ -4,6 +4,10 @@
   "type": "module",
   "description": "OpenCode TUI sidebar plugin: OpenCode Go usage windows + DeepSeek balance, auto-switched by the active model.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sanksu/opencode-go-usagebar.git"
+  },
   "exports": {
     "./tui": "./src/tui.tsx"
   },
