@@ -1,25 +1,28 @@
 # opencode-go-usagebar
 
-一个 opencode TUI 侧边栏插件：直接显示当前 provider 的花费状态。支持 **opencode-go**（用量窗口）和 **DeepSeek**（余额），并根据会话当前模型自动切换面板。
+> **English** | [中文](README.zh.md)
 
-## 功能
+An opencode TUI sidebar plugin that shows the active provider's spend status directly. Supports **opencode-go** (usage windows) and **DeepSeek** (balance), auto-switching the panel based on the active session model.
 
-- 侧边栏直接展示用量/余额，无需点击弹窗
-- **opencode-go**：滚动 / 每周 / 每月三个用量窗口（已用百分比 + 重置倒计时 + 进度条）
-- **DeepSeek**：总余额、赠送余额、充值余额
-- 自动跟随会话模型切换面板（跟随 `session.model`，模型切换后发消息即生效）
-- 每 10 分钟轮询刷新
-- 告警提醒：Go 窗口用量 ≥ 90%；DeepSeek 余额低于阈值（余额恢复后再次跌破会重新提醒）
+## Features
 
-## 安装
+- Displays usage/balance directly in the sidebar, no popups
+- **opencode-go**: rolling / weekly / monthly usage windows (used percent + reset countdown + progress bar)
+- **DeepSeek**: total / granted / topped-up balance
+- Auto-follows the session model (tracks `session.model`; after a model switch, sending a message applies it)
+- Polls every 10 minutes
+- Manual refresh: click the panel title bar to re-fetch immediately, with a "last updated" timestamp shown in the header
+- Alerts: any Go window ≥ 90% used; DeepSeek balance below threshold (re-alerts if balance drops again after recovering)
 
-从 npm 安装：
+## Installation
+
+Install from npm:
 
 ```bash
 bun add opencode-go-usagebar
 ```
 
-然后在项目的 `.opencode/tui.json` 中注册插件：
+Then register the plugin in your project's `.opencode/tui.json`:
 
 ```json
 {
@@ -28,87 +31,93 @@ bun add opencode-go-usagebar
 }
 ```
 
-插件入口为 `package.json` 的 `exports["./tui"]`（`src/tui.tsx`）。
+The plugin entry is `package.json`'s `exports["./tui"]` (`src/tui.tsx`).
 
-## 配置
+## Configuration
 
-插件从以下来源读取凭据（优先级从高到低）：
+The plugin reads credentials from the following sources (highest priority first):
 
-**opencode-go（dashboard）**
+**opencode-go (dashboard)**
 
-| 配置 | 来源 |
-|------|------|
-| `OPENCODE_GO_USAGEBAR_API_KEY` | 环境变量 |
+| Config | Source |
+|--------|--------|
+| `OPENCODE_GO_USAGEBAR_API_KEY` | environment variable |
 | `workspaceId` / `authCookie` | `~/.config/opencode/opencode-go-usagebar.json` |
 
-dashboard 抓取需要 sidecar 配置文件：
+Dashboard scraping needs a sidecar config file:
 
 ```json
 {
   "go": {
-    "workspaceId": "你的 workspace id",
-    "authCookie": "你的登录 cookie"
+    "workspaceId": "your workspace id",
+    "authCookie": "your login cookie"
   }
 }
 ```
 
 **DeepSeek**
 
-| 配置 | 来源 |
-|------|------|
-| `DEEPSEEK_API_KEY` | 环境变量 |
-| `deepseek.key` | opencode 的 `auth.json` |
+| Config | Source |
+|--------|--------|
+| `DEEPSEEK_API_KEY` | environment variable |
+| `deepseek.key` | opencode's `auth.json` |
 
-## 环境变量
+### Credential security
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `OPENCODE_GO_USAGEBAR_POLL_MS` | `600000` | 轮询间隔（毫秒） |
-| `OPENCODE_GO_USAGEBAR_LOW_BALANCE` | `10` | DeepSeek 低余额告警阈值（CNY） |
-| `OPENCODE_GO_USAGEBAR_LANG` | 自动检测 | 界面语言：`zh` / `en` |
+- `authCookie` and API keys are sensitive credentials. The plugin only uses them to query the corresponding official service for usage/balance data, and never writes them to logs or sends them anywhere else.
+- The `opencode-go-usagebar.json` sidecar file contains credentials — **do not commit it to git** (the repo's `.gitignore` excludes common credential files).
+- Environment variables (`OPENCODE_GO_USAGEBAR_*`) are safer than the sidecar file; prefer them when possible.
 
-## 工作原理
+## Environment variables
 
-1. 按当前会话模型解析 provider：`session.model.providerID`（`opencode-go` 或 `deepseek`），未命中时回退配置默认模型
-2. 插件激活对应 provider 并立即拉取一次，之后每 10 分钟轮询
-3. **opencode-go**：请求 dashboard 页面并解析用量窗口（`rollingUsage` / `weeklyUsage` / `monthlyUsage`）
-4. **DeepSeek**：调用官方余额 API
-5. 达到阈值时通过 toast 提醒
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENCODE_GO_USAGEBAR_POLL_MS` | `600000` | Poll interval (ms) |
+| `OPENCODE_GO_USAGEBAR_LOW_BALANCE` | `10` | DeepSeek low-balance alert threshold (CNY) |
+| `OPENCODE_GO_USAGEBAR_LANG` | auto-detect | UI language: `zh` / `en` |
 
-## 项目结构
+## How it works
+
+1. Resolve the provider from the active session model: `session.model.providerID` (`opencode-go` or `deepseek`), falling back to the configured default model.
+2. The plugin activates the matching provider, fetches once immediately, then polls every 10 minutes.
+3. **opencode-go**: fetches the dashboard page and parses the usage windows (`rollingUsage` / `weeklyUsage` / `monthlyUsage`).
+4. **DeepSeek**: calls the official balance API.
+5. Alerts are raised via toast when thresholds are crossed.
+
+## Project structure
 
 ```
 src/
-├── tui.tsx             # 插件入口（默认导出）
-├── plugin.tsx          # 主逻辑：store、轮询、告警、侧边栏 UI
+├── tui.tsx             # Plugin entry (default export)
+├── plugin.tsx          # Main logic: store, polling, alerts, sidebar UI
 ├── providers/
-│   ├── go.ts           # opencode-go 用量获取（dashboard 抓取）
-│   └── deepseek.ts     # DeepSeek 余额获取
-├── auth.ts             # auth.json 读取
-├── model.ts            # provider 解析
-├── format.ts           # 格式化工具（百分比、倒计时、进度条）
-├── locale.ts           # 中英文案
-└── usage-types.ts      # 类型定义
+│   ├── go.ts           # opencode-go usage fetch (dashboard scraping)
+│   └── deepseek.ts     # DeepSeek balance fetch
+├── auth.ts             # auth.json reading
+├── model.ts            # provider resolution
+├── format.ts           # formatting helpers (percent, countdown, progress bar)
+├── locale.ts           # zh/en strings
+└── usage-types.ts      # type definitions
 ```
 
-## 开发
+## Development
 
 ```bash
-bun install         # 安装依赖
-bun run typecheck   # TypeScript 类型检查
-bun test            # 单元测试
+bun install         # install dependencies
+bun run typecheck   # TypeScript type checking
+bun test            # unit tests
 ```
 
-本地调试时，可通过 `.opencode/tui.json` 的 `"plugin": [".."]` 以目录方式引用本仓库。
+For local debugging, reference this repo as a directory via `"plugin": [".."]` in `.opencode/tui.json`.
 
-## 发布
+## Release
 
-版本与发布由 [changesets](https://github.com/changesets/changesets) + GitHub Actions 管理：
+Versioning and publishing are managed by [changesets](https://github.com/changesets/changesets) + GitHub Actions:
 
-1. 修改后运行 `bunx changeset` 记录变更（semver 类型）
-2. 合并 PR 后，CI 自动创建 Version PR；合并 Version PR 后自动发布到 npm
+1. After a change, run `bunx changeset` to record it (semver type).
+2. After merging a PR, CI automatically creates a Version PR; merging that publishes to npm.
 
-发布需要仓库 Secrets 配置 `NPM_TOKEN`（npm access token）。
+Publishing uses npm's OIDC trusted publishing (no long-lived token needed) and automatically creates a GitHub Release with provenance attestations. On the npm side, configure a trusted publisher in the package's Settings → Trusted publishing that matches the repo's `release.yml` workflow.
 
 ## License
 
