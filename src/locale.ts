@@ -13,6 +13,8 @@ export type Strings = {
   available: string
   unavailable: string
   loading: string
+  refreshing: string
+  updatedAtLabel: (time: string) => string
   api: string
   dashboard: string
   goAlert: (label: string, percent: number) => string
@@ -32,6 +34,8 @@ const zh: Strings = {
   available: "可用",
   unavailable: "不可用",
   loading: "加载中…",
+  refreshing: "刷新中…",
+  updatedAtLabel: (time) => `更新于 ${time}`,
   api: "API",
   dashboard: "仪表盘",
   goAlert: (label, percent) => `${label} 已用 ${percent}%`,
@@ -51,6 +55,8 @@ const en: Strings = {
   available: "Available",
   unavailable: "Unavailable",
   loading: "Loading…",
+  refreshing: "Refreshing…",
+  updatedAtLabel: (time) => `Updated ${time}`,
   api: "API",
   dashboard: "Dashboard",
   goAlert: (label, percent) => `${label} used ${percent}%`,

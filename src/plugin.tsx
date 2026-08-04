@@ -31,6 +31,7 @@ type UsageStore = {
   loading: () => boolean
   updatedAt: () => number | null
   activate: (provider: ProviderId | null) => void
+  refresh: (opts?: { manual?: boolean }) => Promise<void>
 }
 
 const POLL_MS = Number(process.env.OPENCODE_GO_USAGEBAR_POLL_MS) || 600_000
@@ -52,7 +53,7 @@ function createUsageStore(api: TuiPluginApi): UsageStore {
     const p = current
     if (!p || inFlight) return
     inFlight = true
-    setLoading(status() === null)
+    setLoading(status() === null || Boolean(opts?.manual))
     try {
       const result = await fetchStatus(api, p, opts)
       if (p !== current) return
@@ -120,6 +121,7 @@ function createUsageStore(api: TuiPluginApi): UsageStore {
     loading,
     updatedAt,
     activate,
+    refresh,
   }
 }
 
@@ -233,6 +235,12 @@ function UsageSidebar(props: {
     return s.kind === "windows" ? (s.source === "dashboard" ? t.dashboard : t.api) : t.api
   })
 
+  const updatedAtLabel = createMemo(() => {
+    const ts = updatedAt()
+    if (!ts) return ""
+    return t.updatedAtLabel(new Date(ts).toLocaleTimeString(lang))
+  })
+
   return (
     <Show when={provider()}>
       <box
@@ -245,13 +253,15 @@ function UsageSidebar(props: {
         gap={1}
       >
         <Divider theme={theme()} />
-        <box flexDirection="row" justifyContent="space-between">
+        <box flexDirection="row" justifyContent="space-between" onMouse={() => void store.refresh({ manual: true })}>
           <box backgroundColor={theme().primary} paddingLeft={1} paddingRight={1}>
             <text fg={theme().selectedListItemText} attributes={TextAttributes.BOLD}>
               {provider() === "opencode-go" ? t.goPanelTitle : t.deepseekPanelTitle}
             </text>
           </box>
-          <text fg={theme().textMuted}>{sourceTag()}</text>
+          <text fg={theme().textMuted}>
+            {loading() ? (updatedAt() ? t.refreshing : t.loading) : `${sourceTag()} · ${updatedAtLabel()}`}
+          </text>
         </box>
 
         <Show when={loading()}>
