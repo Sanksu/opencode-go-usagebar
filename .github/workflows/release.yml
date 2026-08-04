@@ -42,7 +42,7 @@ jobs:
         uses: changesets/action@v1
         with:
           version: bun run changeset version
-          publish: npm publish --provenance --access public
+          publish: bun run changeset publish
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
